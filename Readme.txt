@@ -1,5 +1,3 @@
-Stephanie and Xianlin's small project
-Steps:
-1. Build the interface as the element table shown. 
-2. Click each element node, display its detailed information
-3. In the main interface, create a search function enable user can find the element they want to find. 
+This project by Xianlin Hu is to build an interative visualization on element table. The goal of the project is to use visualization to explore the relationships among elements. Technically, this project is also to help understand how d3 data joint and enter/update/exit pattern works. Right now, the layouts include table layout and circle packing.
+
+This project is under construction...
