@@ -107,7 +107,7 @@
       .attr("height", height + margin.top + margin.bottom)
       .append("g");
 
-    d3.csv('elements.csv', function(data) {
+    d3.csv('./data/elements.csv', function(data) {
       rawData = data;
       tableLayout(data);
     });
