@@ -1,14 +1,301 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Elements Visualization</title>
-    <script src="lib/react.js"></script>
-    <script src="lib/JSXTransformer.js"></script>
-  </head>
+<head>
+  <meta charset="utf-8">
+  <script type="text/javascript" src="lodash.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+  <style>
+    body { margin:0;position:fixed;top:0;right:0;bottom:0;left:0; }
+    svg { width: 100%; height: 100%; }
+    .visTitle {
+      font-size: 20px;
+      font-weight: bold;
+      color: #d9d9d9;
+      margin-top: 5px;
+      margin-left: 20px;
+      text-align: left;
+    }
+    .menu {
+      position: absolute;
+      width: 180px;
+      height: 680px;
+      margin: 30px 10px;
+      padding: 10px 10px 1px 10px;
+      border: solid 2px #bdbdbd;
+      background-color: #f0f0f0;
+    }
+    .menuTitle {
+      text-align: left;
+      font-size: 18px;
+      color: #666;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .categoryMenu {
+      border-bottom: solid 1px #bdbdbd;
+    }
+    .elementTable {
+      position: absolute;
+      width: 1000px;
+      height: 680px;
+      margin: 0px 0px 0px 250px;
+    }
+  </style>
+</head>
+<body>
+  <div class='menu'>
+    <div class='categoryMenu'>
+      <div class='menuTitle'>Category</div>
+      <div>
+        <input 
+          type='radio'
+          name='categoryRadio'
+          id='Classification'
+          onchange="colorElements('Classification')"
+          checked='true'/> Classification
+      </div>
+      <div>
+        <input type='radio' name='categoryRadio' id='Color' onchange="colorElements('Color')"/> Color
+      </div>
+      <div>
+        <input type='radio' name='categoryRadio' id='State' onchange="colorElements('State')"/> State
+      </div>
+      <div>
+        <input type='radio' name='categoryRadio' id='Crystal_Structure' onchange="colorElements('Crystal_Structure')"/> Crystal Structure
+      </div>
+    </div>
+    <div class='layoutMenu'>
+      <div class='menuTitle'>Category Layout</div>
+      <div>
+        <input type='radio' name='layoutRadio' id='table' onchange="tableLayout()" checked='true'/> Table
+      </div>
+      <div>
+        <input type='radio' name='layoutRadio' id='circlePacking' onchange="circlePacking()"/> Circle Packing
+      </div>
+    </div>
+  </div>
+  <div class='visTitle'>Element Visualization</div>
+  <div class='elementTable'></div>
+  <script>
+    ////////////////////////////////properties//////////////////////////////////////////////////
+    var margin = {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 200,
+    };
+    var width = 1000 - margin.left - margin.right;
+    var height = 680 - margin.top - margin.bottom;
+    var recSize = 40;
+    var durationTime = 500;
+    var categoryAttr = 'Classification';
+    var layoutAttr = 'Table';
+    var elements;
+    var rawData;
+    // color
+    var color = d3.scale.category20();
+    // circle packing function
+    var pack = d3.layout.pack()
+          .padding(1)
+          .size([width - margin.right - margin.left, height - margin.top - margin.bottom])
+          .value(function(d) { return 1;});
 
-  <body>
-    <h1>Elements Visualization</h1>
-    <div id='container'></div>
-    <script type="text/jsx" src="example.js"></script>
-  </body>
-</html>
+    ////////////////////////////////rendering//////////////////////////////////////////////////
+    var svg = d3.select("body")
+      .select('.elementTable')
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g");
+
+    d3.csv('elements.csv', function(data) {
+      rawData = data;
+      tableLayout(data);
+    });
+
+    ///////////////////////////////////functions///////////////////////////////////////////////
+    // category with color
+    function colorElements(attribute) {
+      elements.selectAll('.element')
+        .transition().duration(durationTime)
+        .style('fill', (d) => {
+          return color(d[attribute]);
+        });
+
+      elements.selectAll('title')
+        .text((d) => {
+          return d[attribute];
+        });
+
+      categoryAttr = attribute;
+      if (layoutAttr === 'CirclePacking') {
+        circlePacking();
+      }
+    };
+
+    // layout
+    function tableLayout(data) {
+      enterTableLayout(data);
+      updateTableLayout();
+    }
+
+    function enterTableLayout(data) {
+      if (!data) {
+        data = rawData;
+      }
+
+      layoutAttr = 'Table';
+
+      if (elements && elements.data().length) {
+        elements.data([]).exit()
+          .transition().duration(durationTime)
+          .style('fill-opacity', 0)
+          .remove();
+      }
+
+      elements = svg.selectAll('.rectGroup')
+        .data(data)
+        .enter()
+        .append('g')
+        .attr('class', 'rectGroup');
+      
+      elements.append('rect')
+        .attr('class', 'element')
+        .style('fill', 'white')
+        .style('opacity', 0);
+    
+      elements.append('text')
+        .attr('class', 'elementName');
+      
+      elements.append('text')
+        .attr('class', 'elementNum');
+    
+      elements.append('title')
+        .text(function(d) {return d.Full_Name;});
+    };
+
+    function updateTableLayout() {
+      elements.selectAll('rect')
+        .transition().duration(durationTime)
+        .attr('x', function(d) {return d.X * (recSize + 5);})
+        .attr('y', function(d) {return d.Y * (recSize + 5);})
+        .attr('rx', 0)
+        .attr('ry', 0)
+        .attr('width', recSize)
+        .attr('height', recSize)
+        .style('fill', function(d) {return color(d[categoryAttr]);})
+        .style('stroke-width', 1)
+        .style('stroke', 'gray')
+        .style('opacity', 0.6);
+    
+      elements.selectAll('.elementName')
+        .transition().duration(durationTime)
+        .attr('x', function(d) {return d.X * (recSize + 5) + recSize / 2;})
+        .attr('y', function(d) {return d.Y * (recSize + 5) + recSize / 2;})
+        .attr('dy', '.80em')
+        .style('fill', 'black')
+        .text(function(d) {return d.name;})
+        .style('font', 10)
+        .style('text-anchor', 'middle');
+      
+      elements.selectAll('.elementNum')
+        .transition().duration(durationTime)
+        .attr('x', function(d) {return d.X * (recSize + 5) + recSize / 2;})
+        .attr('y', function(d) {return d.Y * (recSize + 5) + recSize / 2;})
+        .attr('dy', '-.20em')
+        .style('fill', 'black')
+        .text(function(d) {return d.Number;})
+        .style('font', 6)
+        .style('text-anchor', 'middle');
+    };
+
+    function circlePacking() {
+      // firstly need remove all rectangles
+      if (layoutAttr !== 'CirclePacking') {
+        elements.data([]).exit()
+          .transition().duration(durationTime)
+          .style('fill-opacity', 0)
+          .remove();
+      }
+      // calculate new data structure based on categoryAttr
+      var nodes = reCalculateCirclePacking();
+      // use new data to enter circles
+      renderCirclesPacking(nodes);
+      layoutAttr = 'CirclePacking';
+    };
+
+    function renderCirclesPacking(nodes) {
+      elements = svg.selectAll('.circleGroup')
+        .data(nodes, function(d) { return d.name;});
+
+      // update the 1st exiting circle
+      elements.select('circle')
+        .transition()
+        .duration(durationTime)
+        .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+        .attr('r', function(d) {return d.r;});
+      
+      // enter new elements if they did't exist before
+      var elementsEntered = elements.enter()
+        .append('g')
+        .attr('class', 'circleGroup');
+
+      elementsEntered.append('circle')
+        .attr('class', 'element')
+        .attr('r', 0)
+        .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+
+
+      elementsEntered.append('text')
+        .attr('class', 'label')
+        .style('text-anchor', 'middle')
+        .attr('dy', '0.35em')
+        .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+        .text(function (d) { return d.name; });
+
+      // remove old elements if they has been deleted
+      elements.exit().remove();
+      // update attributes of all circles and text
+      updateCirclePacking();
+    };
+
+    function updateCirclePacking() {
+      elements.selectAll('circle')
+        .transition().duration(durationTime)
+        .attr('r', (d) => d.r)
+        .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+        .style('stroke', 'black')
+        .style("fill", (d) => {
+          return d.depth === 2 ? color(d[categoryAttr]) : 'white';
+        }).style('fill-opacity', (d) => {
+          return d.depth === 2 ? 0.6 : 0;
+        });
+
+      elements.selectAll('text')
+        .transition().duration(durationTime)
+        .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+        .style("fill-opacity", function(d) {
+          return d.depth === 2 ? 1.0 : 0;
+        }).style("display", function(d) {
+          return d.depth === 0 ? "none" : "blocked";
+        }).text(function(d) {
+          return d.name;
+        });
+    };
+
+    function reCalculateCirclePacking() {
+      var root = {};
+      root.name = 'all';
+      root.children = _.chain(rawData)
+        .groupBy((datum) => datum[categoryAttr])
+        .map((group, key) => {
+          return {
+            name: key,
+            children: group,
+          };
+        })
+        .value();
+
+      return pack.nodes(root);
+    };
+  </script>
+</body>
